@@ -1,0 +1,9 @@
+{
+  "item.shotgunmod.shotgun": "Shotgun",
+
+  "key.category.shotgunmod.shotgun": "Shotgun Mod",
+  "key.shotgunmod.reload": "Reload",
+
+  "sounds.shotgunmod.reload_sound": "Shotgun Reloading",
+  "sounds.shotgunmod.shoot_sound": "Shotgun Shooting"
+}

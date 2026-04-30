@@ -1,0 +1,14 @@
+{
+  "shoot_sound": {
+    "subtitle": "sounds.shotgunmod.shoot_sound",
+    "sounds": [
+      "shotgunmod:shoot_sound"
+    ]
+  },
+  "reload_sound": {
+    "subtitle": "sounds.shotgunmod.reload_sound",
+    "sounds": [
+      "shotgunmod:reload_sound"
+    ]
+  }
+}
