@@ -1,8 +1,8 @@
 {
   "type": "minecraft:crafting_shaped",
   "pattern": [
-    "001",
-    "231"
+    "100",
+    "132"
   ],
   "key": {
     "0": {
@@ -19,7 +19,6 @@
     }
   },
   "result": {
-    "item": "shotgunmod:shotgun",
-    "count": 1
+    "id": "shotgunmod:shotgun"
   }
 }
