@@ -5,7 +5,9 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.ThrownEnderpearl;
 import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.CreativeModeTab;
@@ -16,6 +18,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.WallBannerBlock;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.material.MapColor;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -27,6 +30,7 @@ import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
+import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.neoforge.event.entity.living.LivingFallEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.registries.DeferredBlock;
@@ -84,6 +88,25 @@ public class Shotgunmod {
         
         // Vanilla subtracts 3 naturally (safe fall height), this adds on top of that
         event.setDistance(event.getDistance() * (float)Config.getFallDamageReduction());
+    }
+    
+    @SubscribeEvent
+    public void onEntitySpawn(EntityJoinLevelEvent event){
+        if(!Config.ENDER_PEARL_THROW_SHOOT.get()) return;
+        if(!(event.getEntity() instanceof ThrownEnderpearl pearl)) return;
+            
+        Entity Owner = pearl.getOwner();
+        
+        if(!(Owner instanceof Player player)) return;
+        if (!player.getMainHandItem().is(SHOTGUN_ITEM.get())) return;
+
+        double knockbackStrenght = Config.ENDER_PEARL_BOOST_AMOUNT.get();
+        Vec3 look = player.getLookAngle();
+        pearl.push(
+                look.x * (knockbackStrenght),
+                look.y * (knockbackStrenght),
+                look.z * (knockbackStrenght)
+        );
     }
     
 }

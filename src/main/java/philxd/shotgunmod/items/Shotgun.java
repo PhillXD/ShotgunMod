@@ -5,9 +5,11 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.targeting.TargetingConditions;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.ThrownEnderpearl;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ClipContext;
@@ -43,6 +45,25 @@ public class Shotgun extends Item implements GeoItem {
         ItemStack stack = player.getItemInHand(hand);
         
         if (stack.getDamageValue() >= stack.getMaxDamage()) {
+            if (!level.isClientSide && Config.AUTO_RELOAD_ON_SHOOT.get()) {
+                player.getCooldowns().addCooldown(stack.getItem(), Config.RELOAD_COOLDOWN.get());
+                stack.setDamageValue(0);
+                
+                ((Shotgun) stack.getItem()).triggerAnim(
+                        player,
+                        GeoItem.getOrAssignId(stack, (ServerLevel)level),
+                        "controller",
+                        "reload"
+                );
+
+                level.playSound(null,
+                        player.getX(), player.getY(), player.getZ(),
+                        ModSounds.RELOAD_SOUND.get(),
+                        SoundSource.PLAYERS,
+                        1f,
+                        player.getRandom().nextFloat() * 0.5f + 0.75f
+                );
+            }
             player.getCooldowns().addCooldown(this, Config.MISSFIRE_COOLDOWN.get());
             return InteractionResultHolder.fail(stack);
         }
@@ -53,17 +74,17 @@ public class Shotgun extends Item implements GeoItem {
             ServerLevel serverLevel = (ServerLevel) level;
             
             double recoilStrength = Config.RECOIL_STRENGTH.get();
-
-            player.setDeltaMovement(player.getDeltaMovement().add(
-                    -player.getLookAngle().x * recoilStrength *1,
-                    -player.getLookAngle().y * recoilStrength * 1,
-                    -player.getLookAngle().z * recoilStrength * 1
-            ));
-            player.hurtMarked = true;
             
-            List<LivingEntity> entities = level.getNearbyEntities(
-                    LivingEntity.class,
-                    TargetingConditions.DEFAULT,
+            if(!Config.NO_RECOIL_WHEN_SNEAKING.get() || !player.isShiftKeyDown()) {
+                player.setDeltaMovement(player.getDeltaMovement().add(
+                        -player.getLookAngle().x * recoilStrength * 1,
+                        -player.getLookAngle().y * recoilStrength * 1,
+                        -player.getLookAngle().z * recoilStrength * 1
+                ));
+                player.hurtMarked = true;
+            }
+            
+            List<Entity> entities = level.getEntities(
                     player,
                     player.getBoundingBox().inflate(Config.MAX_DAMAGE_RANGE.get())
             );
@@ -71,7 +92,7 @@ public class Shotgun extends Item implements GeoItem {
             Vec3 pos = player.getEyePosition();
             Vec3 look = player.getLookAngle();
 
-            for (LivingEntity entity : entities) {
+            for (Entity entity : entities) {
                 Vec3 toTarget = entity.getEyePosition().subtract(pos).normalize();
                 
                 if (toTarget.dot(look) > Config.getShotgunSpread()) {
@@ -79,7 +100,7 @@ public class Shotgun extends Item implements GeoItem {
                     BlockHitResult result = level.clip(new ClipContext(
                             pos,
                             entity.getEyePosition(),
-                            ClipContext.Block.OUTLINE,
+                            ClipContext.Block.COLLIDER,
                             ClipContext.Fluid.NONE,
                             player
                     ));
@@ -89,13 +110,26 @@ public class Shotgun extends Item implements GeoItem {
                     
                     double distance = Math.min(pos.distanceTo(entity.position()),0.5);
                     double DamageReduction = Math.min((distance-0.5) / Config.DAMAGE_FALLOFF.get(),Config.SHOTGUN_BASE_DAMAGE.get());
-                    entity.hurt(level.damageSources().playerAttack(player), (float)(Config.SHOTGUN_BASE_DAMAGE.get() - DamageReduction));
-                    double knockbackStrenght = Config.KNOCKBACK_STRENGTH.get();
-                    entity.push(
-                            look.x * (knockbackStrenght / distance),
-                            look.y * (knockbackStrenght / distance),
-                            look.z * (knockbackStrenght / distance)
-                    );
+                    if(entity instanceof ThrownEnderpearl pearl){
+                        if(Config.ENDER_PEARL_ACTION.get() == Config.PearlAction.IGNORE) continue;
+                        if(Config.ENDER_PEARL_ACTION.get() == Config.PearlAction.DESTROY) pearl.discard();
+                        if(Config.ENDER_PEARL_ACTION.get() == Config.PearlAction.SHOOT) {
+                            double knockbackStrenght = Config.ENDER_PEARL_BOOST_AMOUNT.get();
+                            pearl.push(
+                                    look.x * (knockbackStrenght / distance),
+                                    look.y * (knockbackStrenght / distance),
+                                    look.z * (knockbackStrenght / distance)
+                            );
+                        }
+                    }else if(entity instanceof LivingEntity living) {
+                        living.hurt(level.damageSources().playerAttack(player), (float) (Config.SHOTGUN_BASE_DAMAGE.get() - DamageReduction));
+                        double knockbackStrenght = Config.KNOCKBACK_STRENGTH.get();
+                        living.push(
+                                look.x * (knockbackStrenght / distance),
+                                look.y * (knockbackStrenght / distance),
+                                look.z * (knockbackStrenght / distance)
+                        );
+                    }
                 }
             }
 
